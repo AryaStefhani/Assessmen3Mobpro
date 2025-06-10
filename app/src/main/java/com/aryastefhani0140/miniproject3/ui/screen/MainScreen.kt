@@ -99,12 +99,18 @@ fun BookReviewItem(bookReview: BookReview) {
 
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(BookApiService.getBookImageUrl(bookReview.imageId))
+                    .data(
+                        if (bookReview.judul_buku == "Laskar Pelangi")
+                        BookApiService.getBookImageUrl(bookReview.imageId)
+                        else
+                        BookApiService.getBookImageUrl(bookReview.imageId)
+                    )
                     .crossfade(true)
                     .build(),
                 contentDescription = stringResource(R.string.book_cover, bookReview.judul_buku),
                 contentScale = ContentScale.Crop,
                 placeholder = painterResource(id = R.drawable.loading_img),
+                error = painterResource(id = R.drawable.baseline_broken_image_24),
                 modifier = Modifier
                     .size(80.dp, 120.dp)
                     .clip(RoundedCornerShape(8.dp))
