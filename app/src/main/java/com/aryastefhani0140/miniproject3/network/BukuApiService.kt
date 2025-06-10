@@ -29,6 +29,9 @@ object BookApiService {
     }
 
     fun getBookImageUrl(imageId: String): String {
-        return "${BASE_URL}images/$imageId.jpg"
+        return "${BASE_URL}image.php?id=$imageId"
     }
+    enum class ApiStatus { LOADING, SUCCESS, FAILED }
+
+
 }
