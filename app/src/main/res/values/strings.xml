@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">miniproject3</string>
+    <string name="app_name">Book Review App</string>
+    <string name="book_cover">Book cover %1$s</string>
 </resources>
