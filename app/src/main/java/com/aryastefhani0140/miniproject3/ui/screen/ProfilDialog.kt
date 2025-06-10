@@ -1,6 +1,7 @@
 package com.aryastefhani0140.miniproject3.ui.screen
 
 import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import com.aryastefhani0140.miniproject3.R
 import com.aryastefhani0140.miniproject3.model.User
 import com.aryastefhani0140.miniproject3.ui.theme.Miniproject3Theme
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,6 +82,17 @@ fun ProfilDialog(
                     ) {
                         Text(stringResource(R.string.tutup))
                     }
+                    OutlinedButton(
+                        onClick = { onConfirmation() },
+                        modifier = Modifier.padding(8.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.logout),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+
                 }
             }
         }
