@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +104,7 @@ fun BookReviewItem(bookReview: BookReview) {
                     .build(),
                 contentDescription = stringResource(R.string.book_cover, bookReview.judul_buku),
                 contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.loading_img),
                 modifier = Modifier
                     .size(80.dp, 120.dp)
                     .clip(RoundedCornerShape(8.dp))
