@@ -1,6 +1,7 @@
 package com.aryastefhani0140.miniproject3.network
 
 import com.aryastefhani0140.miniproject3.model.BookReview
+import com.aryastefhani0140.miniproject3.model.OpStatus
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.MultipartBody
@@ -38,7 +39,7 @@ interface BukuApiService {
         @Part("isi_review") isiReview: RequestBody,
         @Part("rating") rating: RequestBody,
         @Part image: MultipartBody.Part
-    )
+    ): OpStatus
 }
 
 object BukuApi {
