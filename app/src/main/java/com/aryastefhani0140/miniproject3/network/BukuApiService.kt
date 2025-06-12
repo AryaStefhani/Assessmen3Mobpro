@@ -8,11 +8,13 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.Query
 
 private const val BASE_URL = "https://store.sthresearch.site/"
 
@@ -40,7 +42,14 @@ interface BukuApiService {
         @Part("rating") rating: RequestBody,
         @Part image: MultipartBody.Part
     ): OpStatus
+
+    @DELETE("book_review.php")
+    suspend fun deleteBookReview(
+        @Header("Authorization") userId: String,
+        @Query("id") bookReviewId: String
+    ): OpStatus
 }
+
 
 object BukuApi {
     val service: BukuApiService by lazy {

@@ -5,5 +5,6 @@ data class BookReview(
     val judul_buku: String,
     val isi_review: String,
     val rating: Float,
-    val imageId: String
+    val imageId: String,
+
 )

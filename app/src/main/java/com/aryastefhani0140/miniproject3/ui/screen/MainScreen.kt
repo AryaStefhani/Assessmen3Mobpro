@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -98,6 +99,8 @@ fun MainScreen() {
     val errorMessage by viewModel.errorMessage
     var showDialog by remember { mutableStateOf(false) }
     var showReviewDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var selectedBookReview by remember { mutableStateOf<BookReview?>(null) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
@@ -150,7 +153,15 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        ScreenContent(viewModel, user.email, Modifier.padding(innerPadding))
+        ScreenContent(
+            viewModel,
+            user.email,
+            Modifier.padding(innerPadding),
+            onDelete = { bookReview ->
+                selectedBookReview = bookReview
+                showDeleteDialog = true
+            }
+        )
 
         if (showDialog) {
             ProfilDialog(
@@ -170,6 +181,17 @@ fun MainScreen() {
                 showReviewDialog = false
             }
         }
+
+        if (showDeleteDialog) {
+            HapusDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                onConfirm = {
+                    selectedBookReview?.let { viewModel.deleteData(user.email, it.id) }
+                    showDeleteDialog = false
+                }
+            )
+        }
+
         if (errorMessage != null) {
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
@@ -178,7 +200,12 @@ fun MainScreen() {
 }
 
 @Composable
-fun ScreenContent(viewModel: MainViewModel,userId: String, modifier: Modifier = Modifier) {
+fun ScreenContent(
+    viewModel: MainViewModel,
+    userId: String,
+    modifier: Modifier = Modifier,
+    onDelete: (BookReview) -> Unit
+) {
     val data by viewModel.data
     val status by viewModel.status.collectAsState()
 
@@ -201,7 +228,12 @@ fun ScreenContent(viewModel: MainViewModel,userId: String, modifier: Modifier = 
                 columns = GridCells.Fixed(2),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(data) { BookReviewItem(bookReview = it) }
+                items(data) {
+                    BookReviewItem(
+                        bookReview = it,
+                        onDelete = { onDelete(it) }
+                    )
+                }
             }
         }
         BukuApi.ApiStatus.FAILED -> {
@@ -224,7 +256,7 @@ fun ScreenContent(viewModel: MainViewModel,userId: String, modifier: Modifier = 
 }
 
 @Composable
-fun BookReviewItem(bookReview: BookReview) {
+fun BookReviewItem(bookReview: BookReview, onDelete: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -256,14 +288,33 @@ fun BookReviewItem(bookReview: BookReview) {
                     .fillMaxWidth()
                     .padding(start = 12.dp)
             ) {
-                Text(
-                    text = bookReview.judul_buku,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = bookReview.judul_buku,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IconButton(
+                        onClick = { onDelete() },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Hapus review",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
 
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp),
