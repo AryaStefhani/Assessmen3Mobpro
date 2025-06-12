@@ -71,7 +71,7 @@ import com.aryastefhani0140.miniproject3.BuildConfig
 import com.aryastefhani0140.miniproject3.R
 import com.aryastefhani0140.miniproject3.model.BookReview
 import com.aryastefhani0140.miniproject3.model.User
-import com.aryastefhani0140.miniproject3.network.BookApiService
+import com.aryastefhani0140.miniproject3.network.BukuApi
 import com.aryastefhani0140.miniproject3.network.UserDataStore
 import com.aryastefhani0140.miniproject3.ui.theme.Miniproject3Theme
 import com.canhub.cropper.CropImageContract
@@ -85,7 +85,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
@@ -94,13 +93,15 @@ fun MainScreen() {
     val user by dataStore.userFlow.collectAsState(User())
 
     var showDialog by remember { mutableStateOf(false) }
+    var showReviewDialog by remember { mutableStateOf(false) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
+        if (bitmap != null) showReviewDialog = true
     }
 
-    Scaffold (
+    Scaffold(
         topBar = {
             TopAppBar(
                 title = {
@@ -111,50 +112,58 @@ fun MainScreen() {
                     titleContentColor = MaterialTheme.colorScheme.primary,
                 ),
                 actions = {
-                        IconButton(onClick = {
-                            if (user.email.isEmpty()) {
+                    IconButton(onClick = {
+                        if (user.email.isEmpty()) {
                             CoroutineScope(Dispatchers.IO).launch { signIn(context, dataStore) }
+                        } else {
+                            showDialog = true
                         }
-                            else {
-                                showDialog = true
-                            }
-                        }) {
-                            Icon(
-                                painter = painterResource(R.drawable.baseline_account_circle_24),
-                                contentDescription = stringResource(R.string.profil),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_account_circle_24),
+                            contentDescription = stringResource(R.string.profil),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             )
         },
         floatingActionButton = {
-                FloatingActionButton(onClick = {
-                    val options = CropImageContractOptions(
-                        null, CropImageOptions(
-                            imageSourceIncludeGallery = false,
-                            imageSourceIncludeCamera = true,
-                            fixAspectRatio = true
-                        )
+            FloatingActionButton(onClick = {
+                val options = CropImageContractOptions(
+                    null, CropImageOptions(
+                        imageSourceIncludeGallery = false,
+                        imageSourceIncludeCamera = true,
+                        fixAspectRatio = true
                     )
-                    launcher.launch(options)
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(id = R.string.tambah_review_buku)
-                    )
-                }
+                )
+                launcher.launch(options)
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(id = R.string.tambah_review_buku)
+                )
+            }
         }
-
-    ){  innerPadding ->
+    ) { innerPadding ->
         ScreenContent(Modifier.padding(innerPadding))
 
-        if (showDialog){
+        if (showDialog) {
             ProfilDialog(
                 user = user,
-                onDismissRequest = {showDialog = false}) {
+                onDismissRequest = { showDialog = false }) {
                 CoroutineScope(Dispatchers.IO).launch { signOut(context, dataStore) }
                 showDialog = false
+            }
+        }
+
+        if (showReviewDialog) {
+            ReviewDialog(
+                bitmap = bitmap,
+                onDismissRequest = { showReviewDialog = false }
+            ) { judulBuku, isiReview, rating ->
+                Log.d("TAMBAH", "$judulBuku $isiReview $rating ditambahkan.")
+                showReviewDialog = false
             }
         }
     }
@@ -167,7 +176,7 @@ fun ScreenContent(modifier: Modifier = Modifier) {
     val status by viewModel.status.collectAsState()
 
     when (status) {
-        BookApiService.ApiStatus.LOADING -> {
+        BukuApi.ApiStatus.LOADING -> {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -175,7 +184,7 @@ fun ScreenContent(modifier: Modifier = Modifier) {
                 CircularProgressIndicator()
             }
         }
-        BookApiService.ApiStatus.SUCCESS -> {
+        BukuApi.ApiStatus.SUCCESS -> {
             LazyVerticalGrid(
                 modifier = modifier.fillMaxSize().padding(4.dp),
                 columns = GridCells.Fixed(2),
@@ -184,7 +193,7 @@ fun ScreenContent(modifier: Modifier = Modifier) {
                 items(data) { BookReviewItem(bookReview = it) }
             }
         }
-        BookApiService.ApiStatus.FAILED -> {
+        BukuApi.ApiStatus.FAILED -> {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
@@ -194,16 +203,14 @@ fun ScreenContent(modifier: Modifier = Modifier) {
                 Button(
                     onClick = { viewModel.retrieveData() },
                     modifier = Modifier.padding(top = 16.dp),
-                    contentPadding = PaddingValues(horizontal=32.dp, vertical=16.dp)
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
                 ) {
                     Text(text = stringResource(id = R.string.try_again))
                 }
             }
         }
     }
-
 }
-
 
 @Composable
 fun BookReviewItem(bookReview: BookReview) {
@@ -218,15 +225,9 @@ fun BookReviewItem(bookReview: BookReview) {
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(
-                        if (bookReview.judul_buku == "Laskar Pelangi")
-                        BookApiService.getBookImageUrl(bookReview.imageId)
-                        else
-                        BookApiService.getBookImageUrl(bookReview.imageId)
-                    )
+                    .data(BukuApi.getBookReviewUrl(bookReview.imageId))
                     .crossfade(true)
                     .build(),
                 contentDescription = stringResource(R.string.book_cover, bookReview.judul_buku),
@@ -239,13 +240,11 @@ fun BookReviewItem(bookReview: BookReview) {
                     .border(1.dp, Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
             )
 
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 12.dp)
             ) {
-
                 Text(
                     text = bookReview.judul_buku,
                     fontWeight = FontWeight.Bold,
@@ -254,7 +253,6 @@ fun BookReviewItem(bookReview: BookReview) {
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-
 
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -274,7 +272,6 @@ fun BookReviewItem(bookReview: BookReview) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-
 
                 Text(
                     text = bookReview.isi_review,
@@ -302,7 +299,7 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
     try {
         val credentialManager = CredentialManager.create(context)
         val result = credentialManager.getCredential(context, request)
-        handleSignIn(result,dataStore)
+        handleSignIn(result, dataStore)
     } catch (e: GetCredentialException) {
         Log.e("SIGN-IN", "Error: ${e.errorMessage}")
     }
@@ -311,33 +308,34 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
 private suspend fun handleSignIn(
     result: GetCredentialResponse,
     dataStore: UserDataStore
-    ) {
+) {
     val credential = result.credential
     if (credential is CustomCredential &&
-        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+    ) {
         try {
             val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data)
             val nama = googleIdToken.displayName ?: ""
             val email = googleIdToken.id
             val photoUrl = googleIdToken.profilePictureUri.toString()
-            dataStore.saveData(User(nama, email, photoUrl))        } catch (e: GoogleIdTokenParsingException) {
+            dataStore.saveData(User(nama, email, photoUrl))
+        } catch (e: GoogleIdTokenParsingException) {
             Log.e("SIGN-IN", "Error: ${e.message}")
         }
-    }
-    else {
+    } else {
         Log.e("SIGN-IN", "Error: unrecognized custom credential type.")
     }
 }
 
-private suspend fun signOut(context: Context,dataStore: UserDataStore){
+private suspend fun signOut(context: Context, dataStore: UserDataStore) {
     try {
         val credentialManager = CredentialManager.create(context)
         credentialManager.clearCredentialState(
             ClearCredentialStateRequest()
         )
         dataStore.saveData(User())
-    }catch (e: ClearCredentialException){
-        Log.e("SIGN-IN","Error: ${e.message}")
+    } catch (e: ClearCredentialException) {
+        Log.e("SIGN-IN", "Error: ${e.message}")
     }
 }
 
@@ -359,8 +357,6 @@ private fun getCroppedImage(
         ImageDecoder.decodeBitmap(source)
     }
 }
-
-
 
 @Preview(showBackground = true)
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)

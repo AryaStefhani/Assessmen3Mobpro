@@ -7,4 +7,12 @@
     <string name="tutup">Tutup</string>
     <string name="logout">Logout</string>
     <string name="tambah_review_buku">Tambah review buku</string>
+    <string name="judul_buku">Judul buku</string>
+    <string name="isi_review">Isi review</string>
+    <string name="rating">Rating</string>
+    <string name="batal">Batal</string>
+    <string name="simpan">Simpan</string>
+
+
+
 </resources>
