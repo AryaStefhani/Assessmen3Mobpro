@@ -24,15 +24,12 @@ class MainViewModel : ViewModel() {
     var errorMessage = mutableStateOf<String?>(null)
         private set
 
-    init {
-        retrieveData()
-    }
 
-    fun retrieveData() {
+    fun retrieveData(userId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             status.value = BukuApi.ApiStatus.LOADING
             try {
-                data.value = BukuApi.service.getBookReview("")
+                data.value = BukuApi.service.getBookReview(userId)
                 status.value = BukuApi.ApiStatus.SUCCESS
                 Log.d("MainViewModel", "Success: Retrieved ${data.value.size} book reviews")
             } catch (e: Exception) {
@@ -54,7 +51,7 @@ class MainViewModel : ViewModel() {
                 )
 
                 if (result.status == "success")
-                    retrieveData()
+                    retrieveData(userId)
                 else
                     throw Exception(result.message)
 
