@@ -1,22 +1,28 @@
 package com.aryastefhani0140.miniproject3.ui.screen
 
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -33,29 +39,36 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.aryastefhani0140.miniproject3.ui.theme.Miniproject3Theme
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.aryastefhani0140.miniproject3.R
+import com.aryastefhani0140.miniproject3.model.BookReview
+import com.aryastefhani0140.miniproject3.network.BukuApi
 
 @Composable
-fun ReviewDialog(
+fun EditDialog(
+    bookReview: BookReview,
     bitmap: Bitmap?,
     onDismissRequest: () -> Unit,
-    onConfirmation: (String, String, Float) -> Unit
+    onConfirm: (String, String, Float, Bitmap?) -> Unit,
+    onEditImage: () -> Unit
 ) {
-    var judulBuku by remember { mutableStateOf("") }
-    var isiReview by remember { mutableStateOf("") }
-    var rating by remember { mutableFloatStateOf(3f) } // Default rating 3.0
+    var judulBuku by remember { mutableStateOf(bookReview.judul_buku) }
+    var isiReview by remember { mutableStateOf(bookReview.isi_review) }
+    var rating by remember { mutableFloatStateOf(bookReview.rating) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
             Text(
-                text = "Tambah Review Buku",
+                text = "Edit Review Buku",
                 fontWeight = FontWeight.Bold
             )
         },
@@ -65,14 +78,59 @@ fun ReviewDialog(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Image(
-                        bitmap = bitmap!!.asImageBitmap(),
-                        contentDescription = "Book Cover",
-                        contentScale = ContentScale.Crop,
+                    Box(
                         modifier = Modifier
                             .size(120.dp, 180.dp)
                             .clip(RoundedCornerShape(8.dp))
-                    )
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "New Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(BukuApi.getBookReviewUrl(bookReview.imageId))
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Current Book Cover",
+                                contentScale = ContentScale.Crop,
+                                placeholder = painterResource(id = R.drawable.loading_img),
+                                error = painterResource(id = R.drawable.baseline_broken_image_24),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onEditImage,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black.copy(alpha = 0.6f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Image",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    TextButton(
+                        onClick = onEditImage,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "Ubah Gambar",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -142,7 +200,7 @@ fun ReviewDialog(
             Button(
                 onClick = {
                     if (judulBuku.isNotBlank() && isiReview.isNotBlank()) {
-                        onConfirmation(judulBuku, isiReview, rating)
+                        onConfirm(judulBuku, isiReview, rating, bitmap)
                     }
                 },
                 enabled = judulBuku.isNotBlank() && isiReview.isNotBlank()
@@ -156,17 +214,4 @@ fun ReviewDialog(
             }
         }
     )
-}
-
-@Preview(showBackground = true)
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-fun ReviewDialogPreview() {
-    Miniproject3Theme {
-        ReviewDialog(
-            bitmap = null,
-            onDismissRequest = {},
-            onConfirmation = { _, _, _ -> }
-        )
-    }
 }

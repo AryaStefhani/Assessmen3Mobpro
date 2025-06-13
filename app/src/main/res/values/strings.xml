@@ -14,6 +14,8 @@
     <string name="simpan">Simpan</string>
     <string name="hapus">Hapus</string>
     <string name="pesan_hapus">Anda yakin ingin menghapus review ini?</string>
+    <string name="hapus_review">Hapus Review</string>
+    <string name="edit_review">Edit review</string>
 
 
 

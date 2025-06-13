@@ -43,13 +43,23 @@ interface BukuApiService {
         @Part image: MultipartBody.Part
     ): OpStatus
 
+    @Multipart
+    @POST("book_review.php")
+    suspend fun updateBookReview(
+        @Header("Authorization") userId: String,
+        @Part("id") id: RequestBody,
+        @Part("judul_buku") judulBuku: RequestBody,
+        @Part("isi_review") isiReview: RequestBody,
+        @Part("rating") rating: RequestBody,
+        @Part image: MultipartBody.Part?
+    ): OpStatus
+
     @DELETE("book_review.php")
     suspend fun deleteBookReview(
         @Header("Authorization") userId: String,
         @Query("id") bookReviewId: String
     ): OpStatus
 }
-
 
 object BukuApi {
     val service: BukuApiService by lazy {

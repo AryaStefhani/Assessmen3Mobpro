@@ -24,7 +24,6 @@ class MainViewModel : ViewModel() {
     var errorMessage = mutableStateOf<String?>(null)
         private set
 
-
     fun retrieveData(userId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             status.value = BukuApi.ApiStatus.LOADING
@@ -48,6 +47,31 @@ class MainViewModel : ViewModel() {
                     isiReview.toRequestBody("text/plain".toMediaTypeOrNull()),
                     rating.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
                     bitmap.toMultipartBody()
+                )
+
+                if (result.status == "success")
+                    retrieveData(userId)
+                else
+                    throw Exception(result.message)
+
+            } catch (e: Exception) {
+                Log.d("MainViewModel", "Failure: ${e.message}")
+                errorMessage.value = "Error: ${e.message}"
+            }
+        }
+    }
+
+    fun updateData(userId: String, id: String, judulBuku: String, isiReview: String, rating: Float, bitmap: Bitmap?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val imagePart = bitmap?.toMultipartBody()
+                val result = BukuApi.service.updateBookReview(
+                    userId,
+                    id.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    judulBuku.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    isiReview.toRequestBody("text/plain".toMediaTypeOrNull()),
+                    rating.toString().toRequestBody("text/plain".toMediaTypeOrNull()),
+                    imagePart
                 )
 
                 if (result.status == "success")

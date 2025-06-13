@@ -20,13 +20,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -99,13 +99,23 @@ fun MainScreen() {
     val errorMessage by viewModel.errorMessage
     var showDialog by remember { mutableStateOf(false) }
     var showReviewDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedBookReview by remember { mutableStateOf<BookReview?>(null) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
+    var editBitmap: Bitmap? by remember { mutableStateOf(null) }
+
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
         if (bitmap != null) showReviewDialog = true
+    }
+
+    val editLauncher = rememberLauncherForActivityResult(CropImageContract()) {
+        editBitmap = getCroppedImage(context.contentResolver, it)
+        if (editBitmap != null) {
+            showEditDialog = true
+        }
     }
 
     Scaffold(
@@ -157,6 +167,11 @@ fun MainScreen() {
             viewModel,
             user.email,
             Modifier.padding(innerPadding),
+            onEdit = { bookReview ->
+                selectedBookReview = bookReview
+                editBitmap = null
+                showEditDialog = true
+            },
             onDelete = { bookReview ->
                 selectedBookReview = bookReview
                 showDeleteDialog = true
@@ -182,12 +197,50 @@ fun MainScreen() {
             }
         }
 
-        if (showDeleteDialog) {
+        if (showEditDialog && selectedBookReview != null) {
+            EditDialog(
+                bookReview = selectedBookReview!!,
+                bitmap = editBitmap,
+                onDismissRequest = {
+                    showEditDialog = false
+                    editBitmap = null
+                    selectedBookReview = null
+                },
+                onConfirm = { judulBuku, isiReview, rating, newBitmap ->
+                    viewModel.updateData(
+                        user.email,
+                        selectedBookReview!!.id,
+                        judulBuku,
+                        isiReview,
+                        rating,
+                        newBitmap
+                    )
+                    showEditDialog = false
+                    editBitmap = null
+                    selectedBookReview = null
+                },
+                onEditImage = {
+                    val options = CropImageContractOptions(
+                        null, CropImageOptions(
+                            imageSourceIncludeGallery = false,
+                            imageSourceIncludeCamera = true,
+                            fixAspectRatio = true
+                        )
+                    )
+                    editLauncher.launch(options)
+                }
+            )
+        }
+        if (showDeleteDialog && selectedBookReview != null) {
             HapusDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                onConfirm = {
-                    selectedBookReview?.let { viewModel.deleteData(user.email, it.id) }
+                onDismissRequest = {
                     showDeleteDialog = false
+                    selectedBookReview = null
+                },
+                onConfirm = {
+                    viewModel.deleteData(user.email, selectedBookReview!!.id)
+                    showDeleteDialog = false
+                    selectedBookReview = null
                 }
             )
         }
@@ -204,6 +257,7 @@ fun ScreenContent(
     viewModel: MainViewModel,
     userId: String,
     modifier: Modifier = Modifier,
+    onEdit: (BookReview) -> Unit,
     onDelete: (BookReview) -> Unit
 ) {
     val data by viewModel.data
@@ -223,14 +277,15 @@ fun ScreenContent(
             }
         }
         BukuApi.ApiStatus.SUCCESS -> {
-            LazyVerticalGrid(
+            LazyColumn(
                 modifier = modifier.fillMaxSize().padding(4.dp),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 80.dp)
+                contentPadding = PaddingValues(bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(data) {
                     BookReviewItem(
                         bookReview = it,
+                        onEdit = { onEdit(it) },
                         onDelete = { onDelete(it) }
                     )
                 }
@@ -256,11 +311,15 @@ fun ScreenContent(
 }
 
 @Composable
-fun BookReviewItem(bookReview: BookReview, onDelete: () -> Unit) {
+fun BookReviewItem(
+    bookReview: BookReview,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -273,7 +332,7 @@ fun BookReviewItem(bookReview: BookReview, onDelete: () -> Unit) {
                     .data(BukuApi.getBookReviewUrl(bookReview.imageId))
                     .crossfade(true)
                     .build(),
-                contentDescription = stringResource(R.string.book_cover, bookReview.judul_buku),
+                contentDescription = "Book cover ${bookReview.judul_buku}",
                 contentScale = ContentScale.Crop,
                 placeholder = painterResource(id = R.drawable.loading_img),
                 error = painterResource(id = R.drawable.baseline_broken_image_24),
@@ -303,22 +362,36 @@ fun BookReviewItem(bookReview: BookReview, onDelete: () -> Unit) {
                         modifier = Modifier.weight(1f)
                     )
 
-                    IconButton(
-                        onClick = { onDelete() },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Hapus review",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Row {
+                        IconButton(
+                            onClick = { onEdit() },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit review",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { onDelete() },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Hapus review",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
 
                 Row(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Star,
@@ -327,22 +400,36 @@ fun BookReviewItem(bookReview: BookReview, onDelete: () -> Unit) {
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = String.format("%.1f", bookReview.rating),
+                        text = bookReview.rating.toInt().toString(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(start = 4.dp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Text(
+                        text = " / 5",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
 
-                Text(
-                    text = bookReview.isi_review,
-                    fontSize = 14.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                    lineHeight = 18.sp
-                )
+                Column {
+                    Text(
+                        text = "Review:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                    Text(
+                        text = bookReview.isi_review,
+                        fontSize = 14.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        lineHeight = 18.sp
+                    )
+                }
             }
         }
     }
